@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caça-palavras</title>
+<style>
+:root{--bg:#fbfaf7;--ink:#1c1c1c;--mute:#77736b;--line:#dcd8ce;--sel:#d3e4f6;--ok:#d9edd6;--okl:#4a8546;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16171a;--ink:#ebe9e3;--mute:#9a968d;--line:#34353a;--sel:#27425f;--ok:#26402a;--okl:#7fc47a}}
+:root[data-theme="dark"]{--bg:#16171a;--ink:#ebe9e3;--mute:#9a968d;--line:#34353a;--sel:#27425f;--ok:#26402a;--okl:#7fc47a}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;-webkit-text-size-adjust:100%}
+main{position:relative;max-width:960px;margin:0 auto;padding:2.5rem 1.25rem 3rem;text-align:center}
+h1{font-weight:400;letter-spacing:.35em;font-size:clamp(1.3rem,4vw,1.9rem);margin:0 0 .5rem;padding-left:.35em}
+.sub{margin:0;color:var(--mute);font-size:.95rem;font-style:italic}
+.rule{width:3rem;height:1px;background:var(--line);margin:1.5rem auto}
+.grid{--cs:min(2.6rem,calc((100vw - 2.5rem)/var(--n)));display:grid;grid-template-columns:repeat(var(--n),var(--cs));justify-content:center;margin:0 auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.c{width:var(--cs);height:var(--cs);display:flex;align-items:center;justify-content:center;font:500 calc(var(--cs)*.52)/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;cursor:pointer;border-radius:2px;transition:background .25s}
+.c.sel{background:var(--sel);transition:none}
+.c.found{background:var(--ok);font-weight:800;box-shadow:inset 0 -2px var(--okl)}
+.c.pop{animation:pop .5s ease}
+@keyframes pop{40%{transform:scale(1.25)}}
+.c:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+h2{font-weight:400;letter-spacing:.3em;font-size:.85rem;color:var(--mute);margin:0 0 1.25rem;padding-left:.3em}
+.words{columns:3;column-gap:2rem;max-width:620px;margin:0 auto;padding:0;list-style:none;text-align:left;font:.95rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em}
+.words li{break-inside:avoid;padding:.45rem 0;border-bottom:1px solid transparent}
+.words li.done{color:var(--mute);text-decoration:line-through;text-decoration-thickness:2px}
+.words li.done::after{content:" \2713";text-decoration:none;display:inline-block;color:var(--okl)}
+.info{display:flex;flex-wrap:wrap;gap:1rem 2.5rem;justify-content:center;align-items:center;font:.95rem ui-monospace,Menlo,Consolas,monospace;margin-top:.5rem}
+.btns{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem}
+button{font:inherit;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;background:transparent;color:var(--ink);border:1px solid var(--ink);padding:.85rem 1.4rem;min-height:44px;cursor:pointer;border-radius:2px}
+button:hover{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--okl);outline-offset:2px}
+button.ghost{border-color:var(--line);color:var(--mute)}
+.theme{position:fixed;top:calc(env(safe-area-inset-top,0px) + .75rem);right:calc(env(safe-area-inset-right,0px) + .75rem);width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-color:var(--line);color:var(--ink);background:var(--bg);z-index:4}
+.theme svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.theme .sun{display:none}
+:root[data-theme="dark"] .theme .sun{display:block}
+:root[data-theme="dark"] .theme .moon{display:none}
+body,.theme,.box{transition:background .3s,color .3s}
+#win,#rank,#welcome{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);display:flex;align-items:center;justify-content:center;padding:1.5rem;z-index:5}
+#win[hidden],#rank[hidden],#welcome[hidden]{display:none}
+#rank{z-index:6}
+#welcome{z-index:7;background:var(--bg)}
+.box{background:var(--bg);border:1px solid var(--ink);padding:2.5rem 2rem;max-width:380px;width:100%;text-align:center;animation:rise .5s ease}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.box h3{font-weight:400;letter-spacing:.3em;margin:0 0 1rem;font-size:1.4rem}
+.box p{margin:.4rem 0;color:var(--mute)}
+.box .t{font:1.6rem ui-monospace,Menlo,monospace;color:var(--ink);margin:1.2rem 0 1.6rem}
+.rec{color:var(--okl)!important;font:.8rem ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;margin:0 0 .5rem!important}
+.rec[hidden]{display:none}
+.box .b{font:1rem ui-monospace,Menlo,monospace;color:var(--mute);margin:-.8rem 0 1.6rem}
+.tema{margin:0 0 .6rem;font:.8rem ui-monospace,Menlo,Consolas,monospace;letter-spacing:.25em;text-transform:uppercase;color:var(--mute)}
+.tema b{color:var(--ink);font-weight:700}
+.sv{margin:0 0 1.2rem;text-align:left}
+.sv[hidden]{display:none}
+.sv label{display:block;font:.75rem ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-bottom:.4rem}
+.sv input{width:100%;min-height:44px;padding:.6rem .8rem;margin-bottom:.8rem;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:2px;font:1rem ui-monospace,Menlo,monospace}
+.sv input:focus-visible{outline:2px solid var(--okl);outline-offset:1px}
+.sv button{width:100%}
+.sv .b{margin:0 0 .8rem;text-align:center}
+.err{color:var(--ink)!important;font-size:.85rem;border-left:3px solid var(--okl);padding-left:.6rem;text-align:left;margin:-.2rem 0 .8rem!important}
+.err[hidden]{display:none}
+.box.rk{max-width:480px;max-height:calc(100vh - 3rem);overflow:auto}
+.rl{list-style:none;margin:0 0 1.5rem;padding:0;text-align:left}
+.rl .p{display:grid;grid-template-columns:2.4rem 1fr auto;gap:.6rem;align-items:baseline;padding:.6rem .6rem;border-bottom:1px solid var(--line);border-left:1px solid transparent}
+.rl .pos{font:.85rem ui-monospace,Menlo,monospace;color:var(--mute)}
+.rl .who{overflow-wrap:anywhere}
+.rl .who small{display:block;font:.72rem ui-monospace,Menlo,monospace;color:var(--mute);letter-spacing:.05em;margin-top:.2rem}
+.rl .pt{font:1rem ui-monospace,Menlo,monospace}
+.rl .r1{background:var(--ok);border-left:4px solid var(--okl);font-weight:800;font-size:1.1rem}
+.rl .r2{border-left:3px solid var(--mute);font-weight:700}
+.rl .r3{border-left:2px solid var(--mute);font-weight:700}
+.rl .r1 .pos,.rl .r2 .pos,.rl .r3 .pos{color:var(--ink)}
+@media (max-width:800px){.words{columns:2}}
+@media (max-width:420px){main{padding-top:1.5rem}.words{font-size:.82rem;column-gap:1rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<button id="theme" class="theme" type="button" aria-label="Ativar modo escuro" aria-pressed="false">
+  <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+</button>
+<main>
+  <h1>CAÇA-PALAVRAS</h1>
+  <p class="tema">Tema: <b id="tname"></b></p>
+  <p class="sub" id="sub">Encontre todas as palavras escondidas.</p>
+  <div class="rule"></div>
+  <div id="grid" class="grid" role="grid" aria-label="Grade do caça-palavras"></div>
+  <div class="rule"></div>
+  <h2>PALAVRAS</h2>
+  <ul id="words" class="words" aria-label="Lista de palavras"></ul>
+  <div class="rule"></div>
+  <div class="info" aria-live="polite">
+    <span>Encontradas: <b id="cnt">0/0</b></span>
+    <span>Tempo: <b id="time">00:00</b></span>
+    <span>Recorde: <b id="best">--:--</b></span>
+    <span>Jogador: <b id="pname"></b></span>
+  </div>
+  <div class="btns">
+    <button id="again" class="ghost">Recomeçar</button>
+    <button id="rankbtn" class="ghost" type="button">Ranking</button>
+    <button id="namebtn" class="ghost" type="button">Trocar jogador</button>
+    <button id="new">Novo jogo</button>
+  </div>
+</main>
+<div id="win" hidden role="dialog" aria-modal="true" aria-labelledby="wt">
+  <div class="box">
+    <h3 id="wt">Parabéns!</h3>
+    <p class="rec" id="wnew" hidden>Novo recorde</p>
+    <p>Você encontrou todas as palavras.</p>
+    <div class="t" id="wtime">Tempo: 00:00</div>
+    <div class="b" id="wbest">Melhor recorde: --:--</div>
+    <div class="b" id="wscore">Pontuação: 0</div>
+    <div class="sv" id="wsave">
+      <div class="b" id="wwho"></div>
+      <button id="wrankbtn" class="ghost" type="button">Ver ranking</button>
+    </div>
+    <button id="playagain">Jogar novamente</button>
+  </div>
+</div>
+<div id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="ht">
+  <div class="box">
+    <h3 id="ht">CAÇA-PALAVRAS</h3>
+    <p>Digite seu nome para jogar. Seu melhor tempo entra no ranking com ele.</p>
+    <div class="sv">
+      <label for="hname">Seu nome</label>
+      <input id="hname" maxlength="16" autocomplete="nickname" placeholder="Apelido">
+      <p class="err" id="herr" role="alert" hidden>Digite um nome para continuar.</p>
+      <button id="hgo" type="button">Começar</button>
+      <button id="hcancel" class="ghost" type="button" hidden style="margin-top:.6rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div id="rank" hidden role="dialog" aria-modal="true" aria-labelledby="rt">
+  <div class="box rk">
+    <h3 id="rt">Ranking</h3>
+    <ol id="rlist" class="rl"></ol>
+    <p id="rempty" hidden>Nenhum resultado salvo ainda.</p>
+    <button id="rclose" type="button">Fechar</button>
+  </div>
+</div>
+<script>
+const THEMES=[
+ {name:"Burnout",words:["AGITAÇÃO","BURNOUT","CONCENTRAÇÃO","ESTRESSE","INSEGURANÇA","MEDO","PRESSÃO","TRABALHO","ANGÚSTIA","CANSAÇO","DEPRESSÃO","EXAUSTÃO","INSÔNIA","PRAZO","SOBRECARGA","ANSIEDADE","COBRANÇA","ESGOTAMENTO","FADIGA","IRRITABILIDADE","PREOCUPAÇÃO","TENSÃO"]},
+ {name:"Ansiedade",words:["APREENSÃO","NERVOSISMO","INQUIETAÇÃO","PALPITAÇÃO","TAQUICARDIA","SUOR","TREMORES","TONTURA","RESPIRAÇÃO","PÂNICO","FOBIA","RUMINAÇÃO","HIPERVIGILÂNCIA","IMPACIÊNCIA","INDECISÃO","PREVENÇÃO","PREVISÃO","CATASTROFIZAÇÃO","EVITAÇÃO","PREOCUPACAO","TENSÃO","MEDO"]}
+];
+const $=s=>document.querySelector(s), KEY="cacapalavras:v1";
+const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+const DIRS=[[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+const ALPHA="ABCDEFGHIJLMNOPQRSTUVXZ";
+const rnd=n=>Math.floor(Math.random()*n);
+let S, cells=[], timer=null, startedAt=null, anchor=null, drag=null, cur=0;
+
+function place(g,w,n){
+  for(let t=0;t<200;t++){
+    const [dr,dc]=DIRS[rnd(8)], r=rnd(n), c=rnd(n), er=r+dr*(w.length-1), ec=c+dc*(w.length-1);
+    if(er<0||ec<0||er>=n||ec>=n) continue;
+    let ok=true;
+    for(let i=0;i<w.length;i++){const v=g[r+dr*i][c+dc*i]; if(v&&v!==w[i]){ok=false;break}}
+    if(!ok) continue;
+    for(let i=0;i<w.length;i++) g[r+dr*i][c+dc*i]=w[i];
+    return true;
+  }
+  return false;
+}
+function build(words){
+  const ws=words.map(norm).sort((a,b)=>b.length-a.length);
+  const total=ws.reduce((a,w)=>a+w.length,0);
+  let n=Math.max(ws[0].length+2,Math.ceil(Math.sqrt(total*1.6)));
+  for(;;n++){
+    for(let t=0;t<40;t++){
+      const g=Array.from({length:n},()=>Array(n).fill(""));
+      if(ws.every(w=>place(g,w,n))){
+        for(let r=0;r<n;r++)for(let c=0;c<n;c++) if(!g[r][c]) g[r][c]=ALPHA[rnd(ALPHA.length)];
+        return {n,grid:g};
+      }
+    }
+  }
+}
+function newGame(){
+  const prev=S?S.theme:-1; let t; do{t=rnd(THEMES.length)}while(t===prev&&THEMES.length>1);
+  const words=THEMES[t].words.slice().sort((a,b)=>a.localeCompare(b,"pt"));
+  const b=build(words);
+  S={theme:t,words,n:b.n,grid:b.grid,found:words.map(()=>null),elapsed:0,done:false};
+  start();
+}
+function start(){
+  stopTimer(); anchor=null; drag=null; cur=0; $("#win").hidden=true; render(); save(); updateTime();
+}
+function render(){
+  const g=$("#grid"); g.style.setProperty("--n",S.n); g.innerHTML=""; cells=[];
+  for(let r=0;r<S.n;r++)for(let c=0;c<S.n;c++){
+    const d=document.createElement("div");
+    d.className="c"; d.setAttribute("role","gridcell"); d.textContent=S.grid[r][c];
+    d.dataset.r=r; d.dataset.c=c; d.tabIndex=(r*S.n+c===cur)?0:-1;
+    d.setAttribute("aria-label",`Letra ${S.grid[r][c]}, linha ${r+1}, coluna ${c+1}`);
+    g.appendChild(d); cells.push(d);
+  }
+  S.found.forEach(f=>f&&f.forEach(i=>cells[i].classList.add("found")));
+  const ul=$("#words"); ul.innerHTML="";
+  S.words.forEach((w,i)=>{const li=document.createElement("li"); li.textContent=w; li.id="w"+i; if(S.found[i]){li.classList.add("done");li.setAttribute("aria-label",w+", encontrada")} ul.appendChild(li)});
+  $("#tname").textContent=THEMES[S.theme].name; $("#sub").textContent="Encontre todas as palavras escondidas.";
+  updateCount();
+}
+const idx=(r,c)=>r*S.n+c;
+function line(a,b){
+  let dr=b[0]-a[0], dc=b[1]-a[1];
+  if(!(dr===0||dc===0||Math.abs(dr)===Math.abs(dc))){
+    const k=Math.round(Math.atan2(dr,dc)/(Math.PI/4)), sr=Math.round(Math.sin(k*Math.PI/4)), sc=Math.round(Math.cos(k*Math.PI/4));
+    let len=(sr&&sc)?Math.round((Math.abs(dr)+Math.abs(dc))/2):Math.max(Math.abs(dr),Math.abs(dc));
+    while(len>0&&(a[0]+sr*len<0||a[0]+sr*len>=S.n||a[1]+sc*len<0||a[1]+sc*len>=S.n)) len--;
+    dr=sr*len; dc=sc*len;
+  }
+  const len=Math.max(Math.abs(dr),Math.abs(dc)), sr=Math.sign(dr), sc=Math.sign(dc), out=[];
+  for(let i=0;i<=len;i++) out.push([a[0]+sr*i,a[1]+sc*i]);
+  return out;
+}
+function paint(path){
+  cells.forEach(c=>c.classList.remove("sel"));
+  (path||[]).forEach(([r,c])=>cells[idx(r,c)].classList.add("sel"));
+}
+function cellAt(x,y){
+  const el=document.elementFromPoint(x,y), c=el&&el.closest&&el.closest(".c");
+  return c?[+c.dataset.r,+c.dataset.c]:null;
+}
+function finish(path){
+  paint(null);
+  if(path.length<2) return;
+  const s=path.map(([r,c])=>S.grid[r][c]).join(""), rv=[...s].reverse().join("");
+  const i=S.words.findIndex((w,k)=>!S.found[k]&&(norm(w)===s||norm(w)===rv));
+  if(i<0) return;
+  S.found[i]=path.map(([r,c])=>idx(r,c));
+  S.found[i].forEach(k=>{const e=cells[k]; e.classList.add("found","pop"); setTimeout(()=>e.classList.remove("pop"),520)});
+  const li=$("#w"+i); li.classList.add("done"); li.setAttribute("aria-label",S.words[i]+", encontrada");
+  updateCount();
+  if(S.found.every(Boolean)) win(); else save();
+}
+function begin(){ if(!startedAt&&!S.done){startedAt=Date.now(); timer=setInterval(updateTime,500)} }
+function elapsed(){return S.elapsed+(startedAt?Date.now()-startedAt:0)}
+function fmt(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function updateTime(){$("#time").textContent=fmt(elapsed())}
+function updateCount(){$("#cnt").textContent=S.found.filter(Boolean).length+"/"+S.words.length}
+function stopTimer(){ if(startedAt){S.elapsed+=Date.now()-startedAt;startedAt=null} clearInterval(timer);timer=null }
+function win(){
+  stopTimer(); S.done=true; updateTime();
+  if(!S.recChecked){
+    const b=getBest(); S.isRecord=!b||S.elapsed<b;
+    if(S.isRecord){try{localStorage.setItem(BK,String(S.elapsed))}catch(e){}}
+    S.recChecked=true;
+  }
+  if(S.score==null) S.score=Math.max(100,5000-Math.floor(S.elapsed/1000)*10);
+  save(); showBest();
+  $("#wscore").textContent="Pontuação: "+S.score;
+  registerResult();
+  $("#wnew").hidden=!S.isRecord;
+  $("#wbest").textContent="Melhor recorde: "+fmt(getBest()||S.elapsed);
+  $("#wtime").textContent="Tempo: "+fmt(S.elapsed);
+  $("#win").hidden=false; $("#playagain").focus();
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({...S,elapsed:elapsed()})) }catch(e){} }
+function load(){ try{ const v=JSON.parse(localStorage.getItem(KEY)); if(v&&v.grid&&v.words&&v.found&&v.words.length===v.found.length&&v.grid.length===v.n&&THEMES[v.theme]&&v.words.every(w=>THEMES[v.theme].words.includes(w))) return v }catch(e){} return null }
+
+const grid=$("#grid");
+grid.addEventListener("pointerdown",e=>{
+  const p=cellAt(e.clientX,e.clientY); if(!p||S.done) return;
+  e.preventDefault(); begin(); cur=idx(...p);
+  if(anchor){ const a=anchor; anchor=null; finish(line(a,p)); return }
+  drag={from:p,to:p,moved:false}; paint([p]);
+});
+grid.addEventListener("pointermove",e=>{
+  const p=cellAt(e.clientX,e.clientY); if(!p) return;
+  if(drag){ if(p[0]!==drag.from[0]||p[1]!==drag.from[1]) drag.moved=true; drag.path=line(drag.from,p); paint(drag.path) }
+  else if(anchor&&e.pointerType==="mouse") paint(line(anchor,p));
+});
+function up(){
+  if(!drag) return; const d=drag; drag=null;
+  if(d.moved&&d.path) finish(d.path);
+  else { anchor=d.from; paint([anchor]); }
+}
+window.addEventListener("pointerup",up);
+window.addEventListener("pointercancel",()=>{drag=null;paint(null)});
+grid.addEventListener("keydown",e=>{
+  const n=S.n, r=Math.floor(cur/n), c=cur%n; let nr=r,nc=c;
+  if(e.key==="ArrowUp")nr--; else if(e.key==="ArrowDown")nr++; else if(e.key==="ArrowLeft")nc--; else if(e.key==="ArrowRight")nc++;
+  else if(e.key==="Escape"){anchor=null;paint(null);return}
+  else if(e.key==="Enter"||e.key===" "){
+    e.preventDefault(); if(S.done) return; begin();
+    if(anchor){const a=anchor;anchor=null;finish(line(a,[r,c]))} else {anchor=[r,c];paint([anchor])}
+    return;
+  } else return;
+  e.preventDefault(); if(nr<0||nc<0||nr>=n||nc>=n) return;
+  cells[cur].tabIndex=-1; cur=idx(nr,nc); cells[cur].tabIndex=0; cells[cur].focus();
+  if(anchor) paint(line(anchor,[nr,nc]));
+});
+$("#new").onclick=newGame;
+$("#playagain").onclick=newGame;
+$("#again").onclick=()=>{S.found=S.words.map(()=>null);S.elapsed=0;S.done=false;S.recChecked=false;S.isRecord=false;S.score=null;S.rankSaved=false;start()};
+document.addEventListener("visibilitychange",()=>{ if(document.hidden){ stopTimer(); save() } });
+window.addEventListener("pagehide",()=>{stopTimer();save()});
+
+const root=document.documentElement, tb=$("#theme");
+function setTheme(t,store){
+  root.setAttribute("data-theme",t);
+  tb.setAttribute("aria-pressed",String(t==="dark"));
+  tb.setAttribute("aria-label",t==="dark"?"Ativar modo claro":"Ativar modo escuro");
+  if(store){try{localStorage.setItem("cacapalavras:theme",t)}catch(e){}}
+}
+let th=null; try{th=localStorage.getItem("cacapalavras:theme")}catch(e){}
+setTheme((th==="dark"||th==="light")?th:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"));
+tb.onclick=()=>setTheme(root.getAttribute("data-theme")==="dark"?"light":"dark",true);
+
+const BK="cacapalavras:best";
+function getBest(){try{const v=+localStorage.getItem(BK);return v>0?v:null}catch(e){return null}}
+function showBest(){const b=getBest();$("#best").textContent=b?fmt(b):"--:--"}
+showBest();
+
+const RK="cacapalavras:ranking", NK="cacapalavras:nome";
+function getRank(){try{const v=JSON.parse(localStorage.getItem(RK));return Array.isArray(v)?v.filter(e=>e&&typeof e.pontos==="number").sort((a,b)=>b.pontos-a.pontos||a.tempo-b.tempo||a.data-b.data):[]}catch(e){return []}}
+function addRank(e){
+  const r=getRank(); r.push(e);
+  r.sort((a,b)=>b.pontos-a.pontos||a.tempo-b.tempo||a.data-b.data);
+  try{localStorage.setItem(RK,JSON.stringify(r.slice(0,50)))}catch(x){}
+}
+function renderRank(){
+  const l=$("#rlist"); l.innerHTML=""; const r=getRank().slice(0,10);
+  $("#rempty").hidden=r.length>0;
+  r.forEach((e,i)=>{
+    const li=document.createElement("li"); li.className="p"+(i<3?" r"+(i+1):"");
+    const pos=document.createElement("span"); pos.className="pos"; pos.textContent=(i+1)+"º";
+    const who=document.createElement("span"); who.className="who"; who.textContent=e.nome||"Jogador";
+    const sm=document.createElement("small"); sm.textContent=(e.tema||"")+" · "+(e.data?new Date(e.data).toLocaleDateString("pt-BR"):"")+" · "+e.pontos+" pts"; who.appendChild(sm);
+    const pt=document.createElement("span"); pt.className="pt"; pt.textContent=typeof e.tempo==="number"?fmt(e.tempo):e.pontos;
+    li.append(pos,who,pt); l.appendChild(li);
+  });
+}
+let rankFrom=null;
+function openRank(){rankFrom=document.activeElement;renderRank();$("#rank").hidden=false;$("#rclose").focus()}
+function closeRank(){
+  $("#rank").hidden=true; const f=rankFrom; rankFrom=null;
+  if(f&&f.offsetParent!==null) f.focus(); else if(!$("#win").hidden) $("#playagain").focus();
+}
+let player="";
+function getName(){try{return (localStorage.getItem(NK)||"").trim().slice(0,16)}catch(e){return ""}}
+function showName(){$("#pname").textContent=player}
+function registerResult(){
+  if(S&&S.done&&!S.rankSaved&&player){
+    addRank({nome:player,pontos:S.score,tema:THEMES[S.theme].name,data:Date.now(),tempo:S.elapsed});
+    S.rankSaved=true; save();
+  }
+  $("#wwho").textContent=(S&&S.rankSaved)?"Resultado salvo no ranking: "+player:"";
+}
+function openWelcome(){
+  stopTimer(); save();
+  $("#hname").value=player; $("#hcancel").hidden=!player; $("#herr").hidden=true;
+  $("main").inert=true; $("#theme").inert=true; $("#welcome").hidden=false; $("#hname").focus();
+}
+function closeWelcome(){$("#welcome").hidden=true;$("main").inert=false;$("#theme").inert=false}
+function confirmName(){
+  const v=$("#hname").value.trim().slice(0,16);
+  if(!v){$("#herr").hidden=false;$("#hname").focus();return}
+  player=v; try{localStorage.setItem(NK,v)}catch(e){}
+  showName(); closeWelcome(); registerResult();
+  if($("#win").hidden) $("#grid").querySelector('.c[tabindex="0"]').focus();
+}
+$("#rankbtn").onclick=openRank;
+$("#rclose").onclick=closeRank;
+$("#rank").addEventListener("click",e=>{if(e.target===e.currentTarget)closeRank()});
+$("#wrankbtn").onclick=openRank;
+$("#namebtn").onclick=openWelcome;
+$("#hgo").onclick=confirmName;
+$("#hcancel").onclick=closeWelcome;
+$("#hname").addEventListener("keydown",e=>{if(e.key==="Enter")confirmName()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return; if(!$("#welcome").hidden){if(player)closeWelcome()} else if(!$("#rank").hidden)closeRank()});
+
+player=getName();
+const saved=load();
+if(saved){ S=saved; start(); if(S.found.every(Boolean)){S.done=true;win()} } else newGame();
+showName(); if(!player) openWelcome();
+</script>
+</body>
+</html>
